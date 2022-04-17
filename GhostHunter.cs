@@ -7,11 +7,11 @@ using System.Collections.Generic;
 using GlobalEnums;
 using Modding;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using Newtonsoft.Json;
 using Satchel;
 using Satchel.HkmpPipe;
-using static GhostHunter.Utils;
 
 namespace GhostHunter
 {
@@ -23,8 +23,6 @@ namespace GhostHunter
         ushort ghostId = 1;
         string currentDirectory = Path.Combine(AssemblyUtils.getCurrentDirectory(),"Ghosts");
         private Dictionary<string,GameObject> Ghosts = new Dictionary<string,GameObject>();
-
-        private List<localGhost> localGhosts = new List<localGhost>();
 
         private Satchel.Animation ghostAnim;
         public override string GetVersion()
@@ -43,7 +41,7 @@ namespace GhostHunter
                 ExtractFile(currentDirectory,"ghost.json");
             }
             ghostAnim = CustomAnimation.LoadAnimation(Path.Combine(currentDirectory,"ghost.json"));
-            HkmpPipe = new HkmpPipe("ghostHunter",false);
+            HkmpPipe = new HkmpPipe("ghostState",false);
             HkmpPipe.OnRecieve += (_,R) =>{
                 var p = R.packet;
                 if(p.eventName.StartsWith("update")){
@@ -62,6 +60,26 @@ namespace GhostHunter
                 }
             };
             On.HeroController.Start += HeroControllerStart;
+        }
+        internal static void ExtractFile(string path,string file){
+            Assembly asm = Assembly.GetExecutingAssembly();
+            foreach (string res in asm.GetManifestResourceNames())
+            {   
+                if(res.EndsWith(file)) {
+                    using (Stream s = asm.GetManifestResourceStream(res))
+                    {
+                            if (s == null) continue;
+                            var buffer = new byte[s.Length];
+                            s.Read(buffer, 0, buffer.Length);
+                            File.WriteAllBytes(Path.Combine(path,file),buffer);
+                            s.Dispose();
+                    }
+                } 
+            }
+        }
+
+        internal static Texture2D LoadTexture(string currentDirectory,string name){
+            return TextureUtils.LoadTextureFromFile(Path.Combine(currentDirectory,name));
         }
         internal GameObject newRemoteGhost(string playerId,string ghostId){
             var ghost = new GameObject($"ghost-{playerId}-{ghostId}");
@@ -86,22 +104,60 @@ namespace GhostHunter
             var localGhost = go.GetAddComponent<localGhost>();
             if(localGhost.ghostId == null || localGhost.ghostId == "0"){
                 localGhost.ghostId = getNextGhostId().ToString();
-                localGhosts.Add(localGhost);
                 GhostHunter.Instance.LogDebug($"created local ghost {localGhost.ghostId}");
             }
+        }
+        internal static Vector3 getColliderCenter(GameObject Parent){
+            var collider = Parent.GetComponent<Collider2D>();
+            if(collider != null){
+                return collider.bounds.center;
+            } 
+            return new Vector3(0f,0f,0f);
         }
 
         public void HeroControllerStart(On.HeroController.orig_Start orig,HeroController self){
             orig(self);
             HkmpPipe.startListening();
+            ModHooks.HeroUpdateHook += update;
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged += activeSceneChanged;
             ModHooks.SlashHitHook += OnSlashHit;
+            ModHooks.ColliderCreateHook += colliderCreateHook;
+            On.HealthManager.Hit += OnHit;
         }
 
-        
+        public void colliderCreateHook(GameObject go){
+            foreach (Collider2D col in go.GetComponentsInChildren<Collider2D>(true))
+            {
+                if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
+                    addLocalGhostTracker(col.gameObject);
+                }
+            }
+        }
+        public void OnHit(On.HealthManager.orig_Hit orig, HealthManager self, HitInstance hitInstance){
+            orig(self, hitInstance);
+            if(self.gameObject.GetComponent<DamageHero>() || self.gameObject.LocateMyFSM("damages_hero")){
+                addLocalGhostTracker(self.gameObject);
+            }
+        }
         public void OnSlashHit( Collider2D col, GameObject gameObject ){
             if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
                 addLocalGhostTracker(col.gameObject);
             }
+        }
+        public void activeSceneChanged(Scene from, Scene to){
+            if(!GameManager.instance.IsGameplayScene()) { return; } 
+            foreach(var kvp in Ghosts){
+                GameObject.Destroy(kvp.Value.gameObject);
+            }
+            /*
+            foreach(var go in Satchel.GameObjectUtils.GetAllGameObjectsInScene()){
+               colliderCreateHook(go);
+            }
+            */
+        }
+        public void update()
+        {
+            if(!GameManager.instance.IsGameplayScene()) { return; } 
         }
 
     }
