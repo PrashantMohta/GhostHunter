@@ -24,8 +24,6 @@ namespace GhostHunter
         string currentDirectory = Path.Combine(AssemblyUtils.getCurrentDirectory(),"Ghosts");
         private Dictionary<string,GameObject> Ghosts = new Dictionary<string,GameObject>();
 
-        private List<localGhost> localGhosts = new List<localGhost>();
-
         private Satchel.Animation ghostAnim;
         public override string GetVersion()
         {
@@ -106,7 +104,6 @@ namespace GhostHunter
             var localGhost = go.GetAddComponent<localGhost>();
             if(localGhost.ghostId == null || localGhost.ghostId == "0"){
                 localGhost.ghostId = getNextGhostId().ToString();
-                localGhosts.Add(localGhost);
                 GhostHunter.Instance.LogDebug($"created local ghost {localGhost.ghostId}");
             }
         }
@@ -124,6 +121,8 @@ namespace GhostHunter
             ModHooks.HeroUpdateHook += update;
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged += activeSceneChanged;
             ModHooks.SlashHitHook += OnSlashHit;
+            ModHooks.ColliderCreateHook += colliderCreateHook;
+            On.HealthManager.Hit += OnHit;
         }
 
         public void colliderCreateHook(GameObject go){
@@ -134,6 +133,12 @@ namespace GhostHunter
                 }
             }
         }
+        public void OnHit(On.HealthManager.orig_Hit orig, HealthManager self, HitInstance hitInstance){
+            orig(self, hitInstance);
+            if(self.gameObject.GetComponent<DamageHero>() || self.gameObject.LocateMyFSM("damages_hero")){
+                addLocalGhostTracker(self.gameObject);
+            }
+        }
         public void OnSlashHit( Collider2D col, GameObject gameObject ){
             if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
                 addLocalGhostTracker(col.gameObject);
@@ -141,10 +146,14 @@ namespace GhostHunter
         }
         public void activeSceneChanged(Scene from, Scene to){
             if(!GameManager.instance.IsGameplayScene()) { return; } 
-            //localGhosts = new List<localGhostTracker>();
-            //foreach(var go in Satchel.GameObjectUtils.GetAllGameObjectsInScene()){
-            //    colliderCreateHook(go);
-            //}
+            foreach(var kvp in Ghosts){
+                GameObject.Destroy(kvp.Value.gameObject);
+            }
+            /*
+            foreach(var go in Satchel.GameObjectUtils.GetAllGameObjectsInScene()){
+               colliderCreateHook(go);
+            }
+            */
         }
         public void update()
         {

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System;
 using Satchel;
 using Satchel.HkmpPipe;
 using static GhostHunter.Utils;
@@ -8,6 +9,8 @@ namespace GhostHunter
         public string playerId,ghostId;
         public Vector3 targetPosition;
         float cumulativeDeltaTime = 0f;
+        private DateTime lastUpdate;
+
         void Start()
         {
             GhostHunter.Instance.HkmpPipe.OnRecieve += handlePacketRecieve;
@@ -27,6 +30,7 @@ namespace GhostHunter
                 );
                 SetScale(float.Parse(ghostData[4]));
                 cumulativeDeltaTime = 0;
+                lastUpdate = DateTime.Now;
             }
             if(p.fromPlayer.ToString() == playerId && p.eventName == $"destroy-{ghostId}"){
                 GameObject.Destroy(gameObject);
@@ -43,6 +47,11 @@ namespace GhostHunter
             if(targetPosition != null){
                 cumulativeDeltaTime += Time.deltaTime;
                 transform.position = Vector2.Lerp(transform.position, targetPosition, cumulativeDeltaTime / (1f/60f));
+            }
+            if(lastUpdate != null){
+                if((DateTime.Now - lastUpdate).TotalMilliseconds > 1000){
+                    GameObject.Destroy(gameObject);
+                }
             }
         }
     }
