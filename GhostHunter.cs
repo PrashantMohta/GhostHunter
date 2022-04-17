@@ -15,59 +15,6 @@ using Satchel.HkmpPipe;
 
 namespace GhostHunter
 {
-    public class ghostState : MonoBehaviour{
-        public string playerId,ghostId;
-        public Vector3 targetPosition;
-        float cumulativeDeltaTime = 0f;
-        void Start()
-        {
-            GhostHunter.Instance.HkmpPipe.OnRecieve += handlePacketRecieve;
-        }
-        void OnDestroy(){
-            GhostHunter.Instance.HkmpPipe.OnRecieve -= handlePacketRecieve;
-        }
-        void handlePacketRecieve(object _,RecievedEventArgs R){
-            var p = R.packet;
-            if(p.fromPlayer.ToString() == playerId && p.eventName == $"update" && p.eventData.StartsWith($"{ghostId},")){
-                var ghostData = p.eventData.Split(',');
-                var ghostId = ghostData[0];
-                targetPosition = new Vector3(
-                    float.Parse(ghostData[1]),
-                    float.Parse(ghostData[2]),
-                    float.Parse(ghostData[3])
-                );
-                SetScale(float.Parse(ghostData[4]));
-                cumulativeDeltaTime = 0;
-            }
-            if(p.fromPlayer.ToString() == playerId && p.eventName == $"destroy-{ghostId}"){
-                GameObject.Destroy(gameObject);
-            }
-        }
-
-        void SetScale(float scale){
-            var ls = transform.localScale;
-            ls.x = scale;
-            transform.localScale = ls;
-        }
-        
-        void Update(){
-            if(targetPosition != null){
-                cumulativeDeltaTime += Time.deltaTime;
-                transform.position = Vector2.Lerp(transform.position, targetPosition, cumulativeDeltaTime / (1f/60f));
-            }
-        }
-    }
-    public class localGhostTracker : MonoBehaviour{
-        public string ghostId;
-        void Update(){
-            var pos = transform.position;
-            var center = GhostHunter.getColliderCenter(gameObject);
-            GhostHunter.Instance.HkmpPipe.SendToAll(0,$"update",$"{ghostId},{pos.x },{pos.y },{pos.z},{transform.localScale.x}",false,true);
-        }
-        void OnDestroy(){
-            GhostHunter.Instance.HkmpPipe.SendToAll(0,$"destroy-{ghostId}","",false,true);
-        }
-    }
     public class GhostHunter : Mod
     {
         internal static GhostHunter Instance;
@@ -77,7 +24,7 @@ namespace GhostHunter
         string currentDirectory = Path.Combine(AssemblyUtils.getCurrentDirectory(),"Ghosts");
         private Dictionary<string,GameObject> Ghosts = new Dictionary<string,GameObject>();
 
-        private List<localGhostTracker> localGhosts = new List<localGhostTracker>();
+        private List<localGhost> localGhosts = new List<localGhost>();
 
         private Satchel.Animation ghostAnim;
         public override string GetVersion()
@@ -140,7 +87,7 @@ namespace GhostHunter
             var ghost = new GameObject($"ghost-{playerId}-{ghostId}");
             SpriteRenderer sr = ghost.AddComponent<SpriteRenderer>();
 
-            ghostState gs = ghost.AddComponent<ghostState>();
+            remoteGhost gs = ghost.AddComponent<remoteGhost>();
             gs.playerId = playerId;
             gs.ghostId = ghostId;
             sr.color = new Color(1f, 1f, 1f, 1.0f);
@@ -156,7 +103,7 @@ namespace GhostHunter
             return ghostId;
         }
         internal void addLocalGhostTracker(GameObject go){
-            var localGhost = go.GetAddComponent<localGhostTracker>();
+            var localGhost = go.GetAddComponent<localGhost>();
             if(localGhost.ghostId == null || localGhost.ghostId == "0"){
                 localGhost.ghostId = getNextGhostId().ToString();
                 localGhosts.Add(localGhost);
