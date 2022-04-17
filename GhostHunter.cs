@@ -7,14 +7,67 @@ using System.Collections.Generic;
 using GlobalEnums;
 using Modding;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using Newtonsoft.Json;
 using Satchel;
 using Satchel.HkmpPipe;
-using static GhostHunter.Utils;
 
 namespace GhostHunter
 {
+    public class ghostState : MonoBehaviour{
+        public string playerId,ghostId;
+        public Vector3 targetPosition;
+        float cumulativeDeltaTime = 0f;
+        void Start()
+        {
+            GhostHunter.Instance.HkmpPipe.OnRecieve += handlePacketRecieve;
+        }
+        void OnDestroy(){
+            GhostHunter.Instance.HkmpPipe.OnRecieve -= handlePacketRecieve;
+        }
+        void handlePacketRecieve(object _,RecievedEventArgs R){
+            var p = R.packet;
+            if(p.fromPlayer.ToString() == playerId && p.eventName == $"update" && p.eventData.StartsWith($"{ghostId},")){
+                var ghostData = p.eventData.Split(',');
+                var ghostId = ghostData[0];
+                targetPosition = new Vector3(
+                    float.Parse(ghostData[1]),
+                    float.Parse(ghostData[2]),
+                    float.Parse(ghostData[3])
+                );
+                SetScale(float.Parse(ghostData[4]));
+                cumulativeDeltaTime = 0;
+            }
+            if(p.fromPlayer.ToString() == playerId && p.eventName == $"destroy-{ghostId}"){
+                GameObject.Destroy(gameObject);
+            }
+        }
+
+        void SetScale(float scale){
+            var ls = transform.localScale;
+            ls.x = scale;
+            transform.localScale = ls;
+        }
+        
+        void Update(){
+            if(targetPosition != null){
+                cumulativeDeltaTime += Time.deltaTime;
+                transform.position = Vector2.Lerp(transform.position, targetPosition, cumulativeDeltaTime / (1f/60f));
+            }
+        }
+    }
+    public class localGhostTracker : MonoBehaviour{
+        public string ghostId;
+        void Update(){
+            var pos = transform.position;
+            var center = GhostHunter.getColliderCenter(gameObject);
+            GhostHunter.Instance.HkmpPipe.SendToAll(0,$"update",$"{ghostId},{pos.x },{pos.y },{pos.z},{transform.localScale.x}",false,true);
+        }
+        void OnDestroy(){
+            GhostHunter.Instance.HkmpPipe.SendToAll(0,$"destroy-{ghostId}","",false,true);
+        }
+    }
     public class GhostHunter : Mod
     {
         internal static GhostHunter Instance;
@@ -24,7 +77,7 @@ namespace GhostHunter
         string currentDirectory = Path.Combine(AssemblyUtils.getCurrentDirectory(),"Ghosts");
         private Dictionary<string,GameObject> Ghosts = new Dictionary<string,GameObject>();
 
-        private List<localGhost> localGhosts = new List<localGhost>();
+        private List<localGhostTracker> localGhosts = new List<localGhostTracker>();
 
         private Satchel.Animation ghostAnim;
         public override string GetVersion()
@@ -43,7 +96,7 @@ namespace GhostHunter
                 ExtractFile(currentDirectory,"ghost.json");
             }
             ghostAnim = CustomAnimation.LoadAnimation(Path.Combine(currentDirectory,"ghost.json"));
-            HkmpPipe = new HkmpPipe("ghostHunter",false);
+            HkmpPipe = new HkmpPipe("ghostState",false);
             HkmpPipe.OnRecieve += (_,R) =>{
                 var p = R.packet;
                 if(p.eventName.StartsWith("update")){
@@ -63,11 +116,31 @@ namespace GhostHunter
             };
             On.HeroController.Start += HeroControllerStart;
         }
+        internal static void ExtractFile(string path,string file){
+            Assembly asm = Assembly.GetExecutingAssembly();
+            foreach (string res in asm.GetManifestResourceNames())
+            {   
+                if(res.EndsWith(file)) {
+                    using (Stream s = asm.GetManifestResourceStream(res))
+                    {
+                            if (s == null) continue;
+                            var buffer = new byte[s.Length];
+                            s.Read(buffer, 0, buffer.Length);
+                            File.WriteAllBytes(Path.Combine(path,file),buffer);
+                            s.Dispose();
+                    }
+                } 
+            }
+        }
+
+        internal static Texture2D LoadTexture(string currentDirectory,string name){
+            return TextureUtils.LoadTextureFromFile(Path.Combine(currentDirectory,name));
+        }
         internal GameObject newRemoteGhost(string playerId,string ghostId){
             var ghost = new GameObject($"ghost-{playerId}-{ghostId}");
             SpriteRenderer sr = ghost.AddComponent<SpriteRenderer>();
 
-            remoteGhost gs = ghost.AddComponent<remoteGhost>();
+            ghostState gs = ghost.AddComponent<ghostState>();
             gs.playerId = playerId;
             gs.ghostId = ghostId;
             sr.color = new Color(1f, 1f, 1f, 1.0f);
@@ -83,25 +156,52 @@ namespace GhostHunter
             return ghostId;
         }
         internal void addLocalGhostTracker(GameObject go){
-            var localGhost = go.GetAddComponent<localGhost>();
+            var localGhost = go.GetAddComponent<localGhostTracker>();
             if(localGhost.ghostId == null || localGhost.ghostId == "0"){
                 localGhost.ghostId = getNextGhostId().ToString();
                 localGhosts.Add(localGhost);
                 GhostHunter.Instance.LogDebug($"created local ghost {localGhost.ghostId}");
             }
         }
+        internal static Vector3 getColliderCenter(GameObject Parent){
+            var collider = Parent.GetComponent<Collider2D>();
+            if(collider != null){
+                return collider.bounds.center;
+            } 
+            return new Vector3(0f,0f,0f);
+        }
 
         public void HeroControllerStart(On.HeroController.orig_Start orig,HeroController self){
             orig(self);
             HkmpPipe.startListening();
+            ModHooks.HeroUpdateHook += update;
+            UnityEngine.SceneManagement.SceneManager.activeSceneChanged += activeSceneChanged;
             ModHooks.SlashHitHook += OnSlashHit;
         }
 
-        
+        public void colliderCreateHook(GameObject go){
+            foreach (Collider2D col in go.GetComponentsInChildren<Collider2D>(true))
+            {
+                if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
+                    addLocalGhostTracker(col.gameObject);
+                }
+            }
+        }
         public void OnSlashHit( Collider2D col, GameObject gameObject ){
             if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
                 addLocalGhostTracker(col.gameObject);
             }
+        }
+        public void activeSceneChanged(Scene from, Scene to){
+            if(!GameManager.instance.IsGameplayScene()) { return; } 
+            //localGhosts = new List<localGhostTracker>();
+            //foreach(var go in Satchel.GameObjectUtils.GetAllGameObjectsInScene()){
+            //    colliderCreateHook(go);
+            //}
+        }
+        public void update()
+        {
+            if(!GameManager.instance.IsGameplayScene()) { return; } 
         }
 
     }
