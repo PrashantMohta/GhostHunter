@@ -15,6 +15,10 @@ using Satchel.HkmpPipe;
 
 namespace GhostHunter
 {
+    public static class EVENT{
+       public static string UPDATE = "U";
+       public static string DESTROY = "D";
+    }
     public class GhostHunter : Mod
     {
         internal static GhostHunter Instance;
@@ -29,22 +33,34 @@ namespace GhostHunter
         {
             return "0.2";
         }
+
+        public void ExtractAnimation(){
+            IoUtils.EnsureDirectory(currentDirectory);
+            var GhostHunterPath = Path.Combine(currentDirectory,"ghost.json");
+            if(!File.Exists(GhostHunterPath)) {
+                AssemblyUtils.ExtractFiles(currentDirectory,(res)=>{
+                    if(res.EndsWith("1.png")) {
+                        return "1.png";
+                    }
+                    if(res.EndsWith("2.png")) {
+                        return "2.png";
+                    }
+                    if(res.EndsWith("ghost.json")) {
+                        return "ghost.json";
+                    }
+                    return "";
+                });
+            }
+        }
         public override void Initialize()
         {
             Instance = this;
-            IoUtils.EnsureDirectory(currentDirectory);
-
-            var GhostHunterPath = Path.Combine(currentDirectory,"ghost.json");
-            if(!File.Exists(GhostHunterPath)) {
-                ExtractFile(currentDirectory,"1.png");
-                ExtractFile(currentDirectory,"2.png");
-                ExtractFile(currentDirectory,"ghost.json");
-            }
+            this.ExtractAnimation();
             ghostAnim = CustomAnimation.LoadAnimation(Path.Combine(currentDirectory,"ghost.json"));
             HkmpPipe = new HkmpPipe("ghostState",false);
             HkmpPipe.OnRecieve += (_,R) =>{
                 var p = R.packet;
-                if(p.eventName.StartsWith("update")){
+                if(p.eventName == EVENT.UPDATE){
                     var ghostData = p.eventData.Split(',');
                     var ghostId = ghostData[0];
                     var ghostPos = new Vector3(
@@ -60,22 +76,6 @@ namespace GhostHunter
                 }
             };
             On.HeroController.Start += HeroControllerStart;
-        }
-        internal static void ExtractFile(string path,string file){
-            Assembly asm = Assembly.GetExecutingAssembly();
-            foreach (string res in asm.GetManifestResourceNames())
-            {   
-                if(res.EndsWith(file)) {
-                    using (Stream s = asm.GetManifestResourceStream(res))
-                    {
-                            if (s == null) continue;
-                            var buffer = new byte[s.Length];
-                            s.Read(buffer, 0, buffer.Length);
-                            File.WriteAllBytes(Path.Combine(path,file),buffer);
-                            s.Dispose();
-                    }
-                } 
-            }
         }
 
         internal static Texture2D LoadTexture(string currentDirectory,string name){
@@ -124,23 +124,23 @@ namespace GhostHunter
             ModHooks.ColliderCreateHook += colliderCreateHook;
             On.HealthManager.Hit += OnHit;
         }
-
+        private bool isValidForSync(GameObject go){
+            return (go.GetComponent<HealthManager>()||go.LocateMyFSM("health_manager_enemy") || go.LocateMyFSM("health_manager") );
+        }
         public void colliderCreateHook(GameObject go){
             foreach (Collider2D col in go.GetComponentsInChildren<Collider2D>(true))
             {
-                if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
+                if(isValidForSync(col.gameObject)){
                     addLocalGhostTracker(col.gameObject);
                 }
             }
         }
         public void OnHit(On.HealthManager.orig_Hit orig, HealthManager self, HitInstance hitInstance){
             orig(self, hitInstance);
-            if(self.gameObject.GetComponent<DamageHero>() || self.gameObject.LocateMyFSM("damages_hero")){
-                addLocalGhostTracker(self.gameObject);
-            }
+            addLocalGhostTracker(self.gameObject);
         }
         public void OnSlashHit( Collider2D col, GameObject gameObject ){
-            if(col.gameObject.GetComponent<DamageHero>() || col.gameObject.LocateMyFSM("damages_hero")){
+            if(isValidForSync(col.gameObject)){
                 addLocalGhostTracker(col.gameObject);
             }
         }
@@ -149,11 +149,6 @@ namespace GhostHunter
             foreach(var kvp in Ghosts){
                 GameObject.Destroy(kvp.Value.gameObject);
             }
-            /*
-            foreach(var go in Satchel.GameObjectUtils.GetAllGameObjectsInScene()){
-               colliderCreateHook(go);
-            }
-            */
         }
         public void update()
         {

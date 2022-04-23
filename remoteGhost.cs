@@ -20,7 +20,8 @@ namespace GhostHunter
         }
         void handlePacketRecieve(object _,RecievedEventArgs R){
             var p = R.packet;
-            if(p.fromPlayer.ToString() == playerId && p.eventName == $"update" && p.eventData.StartsWith($"{ghostId},")){
+            var playerIdString = p.fromPlayer.ToString();
+            if(playerIdString == playerId && p.eventName == EVENT.UPDATE && p.eventData.StartsWith($"{ghostId},",StringComparison.Ordinal)){
                 var ghostData = p.eventData.Split(',');
                 var ghostId = ghostData[0];
                 targetPosition = new Vector3(
@@ -32,7 +33,7 @@ namespace GhostHunter
                 cumulativeDeltaTime = 0;
                 lastUpdate = DateTime.Now;
             }
-            if(p.fromPlayer.ToString() == playerId && p.eventName == $"destroy-{ghostId}"){
+            if(playerIdString == playerId && p.eventName == EVENT.DESTROY  && p.eventData == ghostId){
                 GameObject.Destroy(gameObject);
             }
         }
