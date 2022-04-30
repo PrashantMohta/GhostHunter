@@ -121,7 +121,7 @@ namespace GhostHunter
             ModHooks.HeroUpdateHook += update;
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged += activeSceneChanged;
             ModHooks.SlashHitHook += OnSlashHit;
-            ModHooks.ColliderCreateHook += colliderCreateHook;
+            //ModHooks.ColliderCreateHook += colliderCreateHook;
             On.HealthManager.Hit += OnHit;
         }
         private bool isValidForSync(GameObject go){

@@ -10,10 +10,12 @@ namespace GhostHunter
         public Vector3 targetPosition;
         float cumulativeDeltaTime = 0f;
         private DateTime lastUpdate;
+        private SpriteRenderer sr;
 
         void Start()
         {
             GhostHunter.Instance.HkmpPipe.OnRecieve += handlePacketRecieve;
+            sr = GetComponent<SpriteRenderer>();
         }
         void OnDestroy(){
             GhostHunter.Instance.HkmpPipe.OnRecieve -= handlePacketRecieve;
@@ -21,7 +23,9 @@ namespace GhostHunter
         void handlePacketRecieve(object _,RecievedEventArgs R){
             var p = R.packet;
             var playerIdString = p.fromPlayer.ToString();
-            if(playerIdString == playerId && p.eventName == EVENT.UPDATE && p.eventData.StartsWith($"{ghostId},",StringComparison.Ordinal)){
+            if(playerIdString != playerId) {return;}
+            sr.enabled = true;
+            if(p.eventName == EVENT.UPDATE && p.eventData.StartsWith($"{ghostId},",StringComparison.Ordinal)){
                 var ghostData = p.eventData.Split(',');
                 var ghostId = ghostData[0];
                 targetPosition = new Vector3(
@@ -33,7 +37,7 @@ namespace GhostHunter
                 cumulativeDeltaTime = 0;
                 lastUpdate = DateTime.Now;
             }
-            if(playerIdString == playerId && p.eventName == EVENT.DESTROY  && p.eventData == ghostId){
+            if(p.eventName == EVENT.DESTROY  && p.eventData == ghostId){
                 GameObject.Destroy(gameObject);
             }
         }
@@ -51,7 +55,8 @@ namespace GhostHunter
             }
             if(lastUpdate != null){
                 if((DateTime.Now - lastUpdate).TotalMilliseconds > 1000){
-                    GameObject.Destroy(gameObject);
+                    sr.enabled = false;
+                    //GameObject.Destroy(gameObject);
                 }
             }
         }
