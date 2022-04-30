@@ -3,7 +3,7 @@
     <OutputType>Library</OutputType>
     <RootNamespace>GhostHunter</RootNamespace>
     <AssemblyName>GhostHunter</AssemblyName>
-    <AssemblyVersion>2.0.0</AssemblyVersion>
+    <AssemblyVersion>0.3.0</AssemblyVersion>
     <TargetFramework>net472</TargetFramework>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>

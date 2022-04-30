@@ -31,7 +31,7 @@ namespace GhostHunter
         private Satchel.Animation ghostAnim;
         public override string GetVersion()
         {
-            return "0.2";
+            return "0.3.0";
         }
 
         public void ExtractAnimation(){
