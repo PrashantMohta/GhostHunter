@@ -83,6 +83,9 @@
     <Reference Include="Satchel">
       <HintPath>..\Satchel\bin\Debug\Satchel.dll</HintPath>
     </Reference>
+    <Reference Include="Satchel">
+      <HintPath>..\HkmpPouch\bin\Debug\HkmpPouch.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
       <EmbeddedResource Include="res\1.png" />

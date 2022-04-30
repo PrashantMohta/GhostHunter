@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 using Satchel;
-using Satchel.HkmpPipe;
+using HkmpPouch;
 using static GhostHunter.Utils;
 namespace GhostHunter
 {

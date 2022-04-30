@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 using Newtonsoft.Json;
 using Satchel;
-using Satchel.HkmpPipe;
+using HkmpPouch;
 
 namespace GhostHunter
 {
