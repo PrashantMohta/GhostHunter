@@ -31,7 +31,7 @@ namespace GhostHunter
         private Satchel.Animation ghostAnim;
         public override string GetVersion()
         {
-            return "0.3.0";
+            return "1.0.0";
         }
 
         public void ExtractAnimation(){
@@ -61,7 +61,7 @@ namespace GhostHunter
             HkmpPipe.OnRecieve += (_,R) =>{
                 var p = R.packet;
                 if(p.eventName == EVENT.UPDATE){
-                    var ghostData = p.eventData.Split(',');
+                    var ghostData = p.eventData.Split('|');
                     var ghostId = ghostData[0];
                     var ghostPos = new Vector3(
                         float.Parse(ghostData[1]),
