@@ -25,8 +25,8 @@ namespace GhostHunter
             var playerIdString = p.fromPlayer.ToString();
             if(playerIdString != playerId) {return;}
             sr.enabled = true;
-            if(p.eventName == EVENT.UPDATE && p.eventData.StartsWith($"{ghostId},",StringComparison.Ordinal)){
-                var ghostData = p.eventData.Split(',');
+            if(p.eventName == EVENT.UPDATE && p.eventData.StartsWith($"{ghostId}|",StringComparison.Ordinal)){
+                var ghostData = p.eventData.Split('|');
                 var ghostId = ghostData[0];
                 targetPosition = new Vector3(
                     float.Parse(ghostData[1]),
@@ -54,7 +54,7 @@ namespace GhostHunter
                 transform.position = Vector2.Lerp(transform.position, targetPosition, cumulativeDeltaTime / (1f/60f));
             }
             if(lastUpdate != null){
-                if((DateTime.Now - lastUpdate).TotalMilliseconds > 1000){
+                if((DateTime.Now - lastUpdate).TotalMilliseconds > 10000){
                     sr.enabled = false;
                     //GameObject.Destroy(gameObject);
                 }
