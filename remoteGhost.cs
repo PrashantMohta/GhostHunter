@@ -1,8 +1,9 @@
-using UnityEngine;
-using System;
-using Satchel;
 using HkmpPouch;
+using System;
+using System.Globalization;
+using UnityEngine;
 using static GhostHunter.Utils;
+
 namespace GhostHunter
 {
     public class remoteGhost : MonoBehaviour{
@@ -20,24 +21,24 @@ namespace GhostHunter
         void OnDestroy(){
             GhostHunter.Instance.HkmpPipe.OnRecieve -= handlePacketRecieve;
         }
-        void handlePacketRecieve(object _,RecievedEventArgs R){
-            var p = R.packet;
-            var playerIdString = p.fromPlayer.ToString();
+        void handlePacketRecieve(object _,ReceivedEventArgs R){
+            var p = R.Data;
+            var playerIdString = p.FromPlayer.ToString();
             if(playerIdString != playerId) {return;}
             sr.enabled = true;
-            if(p.eventName == EVENT.UPDATE && p.eventData.StartsWith($"{ghostId}|",StringComparison.Ordinal)){
-                var ghostData = p.eventData.Split('|');
-                var ghostId = ghostData[0];
+            if(p.EventName == EVENT.UPDATE && p.EventData.StartsWith($"{ghostId}|",StringComparison.Ordinal)){
+                var ghostData = p.EventData.Split('|');
+                //var ghostId = ghostData[0];
                 targetPosition = new Vector3(
-                    float.Parse(ghostData[1]),
-                    float.Parse(ghostData[2]),
-                    float.Parse(ghostData[3])
+                    ParseFloat(ghostData[1], targetPosition.x),
+                    ParseFloat(ghostData[2], targetPosition.y),
+                    ParseFloat(ghostData[3], targetPosition.z)
                 );
-                SetScale(float.Parse(ghostData[4]));
+                SetScale(ParseFloat(ghostData[4], transform.localScale.x));
                 cumulativeDeltaTime = 0;
                 lastUpdate = DateTime.Now;
             }
-            if(p.eventName == EVENT.DESTROY  && p.eventData == ghostId){
+            if(p.EventName == EVENT.DESTROY  && p.EventData == ghostId){
                 GameObject.Destroy(gameObject);
             }
         }

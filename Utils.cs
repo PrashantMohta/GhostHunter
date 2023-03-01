@@ -1,21 +1,27 @@
-using System;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Collections;
-using System.Collections.Generic;
-
-using GlobalEnums;
-using Modding;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-
-using Newtonsoft.Json;
-using Satchel;
-using HkmpPouch;
 
 namespace GhostHunter
 {
     public static class Utils{
+
+        internal static string Str(float f, string format="0.00")
+        {
+            return f.ToString(format, CultureInfo.InvariantCulture);
+        }
+        internal static string newOrEmpty(string oldVal, string newVal)
+        {
+            if (oldVal == newVal) return "";
+            return newVal;
+        }
+        internal static float ParseFloat(string f,float defaultValue = 0.0f)
+        {
+            if(f.Length == 0) return defaultValue;
+            return float.Parse(f, CultureInfo.InvariantCulture);
+        }
+
         internal static Vector3 ZeroVector = new Vector3(0,0,0);
 
         internal static void ExtractFile(string path,string file){

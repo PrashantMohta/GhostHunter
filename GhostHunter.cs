@@ -1,17 +1,12 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using System.Collections;
-using System.Collections.Generic;
-
-using GlobalEnums;
+﻿using HkmpPouch;
 using Modding;
+using Satchel;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-
-using Newtonsoft.Json;
-using Satchel;
-using HkmpPouch;
+using static GhostHunter.Utils;
 
 namespace GhostHunter
 {
@@ -22,7 +17,7 @@ namespace GhostHunter
     public class GhostHunter : Mod
     {
         internal static GhostHunter Instance;
-        internal HkmpPipe HkmpPipe;
+        internal PipeClient HkmpPipe;
         
         ushort ghostId = 1;
         string currentDirectory = Path.Combine(AssemblyUtils.getCurrentDirectory(),"Ghosts");
@@ -57,20 +52,20 @@ namespace GhostHunter
             Instance = this;
             this.ExtractAnimation();
             ghostAnim = CustomAnimation.LoadAnimation(Path.Combine(currentDirectory,"ghost.json"));
-            HkmpPipe = new HkmpPipe("ghostState",false);
+            HkmpPipe = new PipeClient("ghostState");
             HkmpPipe.OnRecieve += (_,R) =>{
-                var p = R.packet;
-                if(p.eventName == EVENT.UPDATE){
-                    var ghostData = p.eventData.Split('|');
+                var p = R.Data;
+                if(p.EventName == EVENT.UPDATE){
+                    var ghostData = p.EventData.Split('|');
                     var ghostId = ghostData[0];
                     var ghostPos = new Vector3(
-                        float.Parse(ghostData[1]),
-                        float.Parse(ghostData[2]),
-                        float.Parse(ghostData[3])
+                        ParseFloat(ghostData[1]),
+                        ParseFloat(ghostData[2]),
+                        ParseFloat(ghostData[3])
                     );
-                    var playerGhostId= p.fromPlayer.ToString() + "-" + ghostId;
+                    var playerGhostId= p.FromPlayer.ToString() + "-" + ghostId;
                     if(!Ghosts.TryGetValue(playerGhostId,out var ghost) || ghost == null){
-                        Ghosts[playerGhostId] = newRemoteGhost(p.fromPlayer.ToString(),ghostId);
+                        Ghosts[playerGhostId] = newRemoteGhost(p.FromPlayer.ToString(),ghostId);
                         Ghosts[playerGhostId].transform.position = ghostPos;
                     }
                 }
@@ -117,7 +112,6 @@ namespace GhostHunter
 
         public void HeroControllerStart(On.HeroController.orig_Start orig,HeroController self){
             orig(self);
-            HkmpPipe.startListening();
             ModHooks.HeroUpdateHook += update;
             UnityEngine.SceneManagement.SceneManager.activeSceneChanged += activeSceneChanged;
             ModHooks.SlashHitHook += OnSlashHit;

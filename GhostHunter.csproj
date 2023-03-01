@@ -81,10 +81,10 @@
       <HintPath>$(VanillaFiles)\UnityEngine.ParticleSystemModule.dll</HintPath>
     </Reference>
     <Reference Include="Satchel">
-      <HintPath>..\Satchel\bin\Debug\Satchel.dll</HintPath>
+      <HintPath>$(HollowKnightModsDirectory)\Satchel\Satchel.dll</HintPath>
     </Reference>
     <Reference Include="Satchel">
-      <HintPath>..\HkmpPouch\bin\Debug\HkmpPouch.dll</HintPath>
+      <HintPath>$(HollowKnightModsDirectory)\HkmpPouch\HkmpPouch.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
