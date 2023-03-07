@@ -83,7 +83,7 @@
     <Reference Include="Satchel">
       <HintPath>$(HollowKnightModsDirectory)\Satchel\Satchel.dll</HintPath>
     </Reference>
-    <Reference Include="Satchel">
+    <Reference Include="HkmpPouch">
       <HintPath>$(HollowKnightModsDirectory)\HkmpPouch\HkmpPouch.dll</HintPath>
     </Reference>
   </ItemGroup>
