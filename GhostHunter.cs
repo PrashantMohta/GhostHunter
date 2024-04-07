@@ -40,7 +40,11 @@ namespace GhostHunter
                     if(res.EndsWith("2.png")) {
                         return "2.png";
                     }
-                    if(res.EndsWith("ghost.json")) {
+                    if (res.EndsWith("3.png"))
+                    {
+                        return "3.png";
+                    }
+                    if (res.EndsWith("ghost.json")) {
                         return "ghost.json";
                     }
                     return "";

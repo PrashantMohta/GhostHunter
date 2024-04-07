@@ -47,7 +47,7 @@ namespace GhostHunter
             }
         }
         void OnDestroy(){
-            GhostHunter.Instance.HkmpPipe.Broadcast(EVENT.DESTROY,ghostId);
+            GhostHunter.Instance.HkmpPipe.Broadcast(EVENT.DESTROY,ghostId,null);
         }
     }
 }

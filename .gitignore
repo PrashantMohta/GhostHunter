@@ -3,3 +3,4 @@ obj
 *.png~
 .vs/GhostHunter/v17
 .vs/GhostHunter/DesignTimeBuild
+.vs

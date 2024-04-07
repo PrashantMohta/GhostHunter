@@ -13,9 +13,9 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <VanillaFiles>..\Vanilla</VanillaFiles>
-    <ModdingAPi>..\HollowKnight.Modding\OutputFinal</ModdingAPi>
-    <HollowKnightModsDirectory>..\linkedtoHKMods</HollowKnightModsDirectory>
+    <VanillaFiles>E:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed</VanillaFiles>
+    <ModdingAPi>E:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed</ModdingAPi>
+    <HollowKnightModsDirectory>E:\SteamLibrary\steamapps\common\Hollow Knight\hollow_knight_Data\Managed\Mods</HollowKnightModsDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -89,7 +89,8 @@
   </ItemGroup>
   <ItemGroup>
       <EmbeddedResource Include="res\1.png" />
-      <EmbeddedResource Include="res\2.png" />
+	  <EmbeddedResource Include="res\2.png" />
+	  <EmbeddedResource Include="res\3.png" />
       <EmbeddedResource Include="res\ghost.json" />
   </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
